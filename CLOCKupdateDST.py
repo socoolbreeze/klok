@@ -432,7 +432,7 @@ def clear():
     except Exception as e:
         print(f"❌ Error clearing display: {e}")
 
-def display_current_time():
+def display_current_time(force_log=False):
     """Display the current time with enhanced time management"""
     # Get verified time (works offline too)
     now = time_manager.get_verified_time()
@@ -516,10 +516,16 @@ def display_current_time():
 
     update()
     
-    # Log time update with connection status
-    dst_indicator = " (DST)" if time_module.localtime().tm_isdst else " (STD)"
-    connection_status = "📡" if not time_manager.offline_mode else "🔶"
-    print(f"{connection_status} Display updated: {now.strftime('%H:%M:%S')}{dst_indicator}")
+    # Only log on specific events or every 5 minutes
+    should_log = (
+        force_log or 
+        minute % 5 == 0 and now.second <= 3  # Every 5 minutes during first few seconds
+    )
+    
+    if should_log:
+        dst_indicator = " (DST)" if time_module.localtime().tm_isdst else " (STD)"
+        connection_status = "📡" if not time_manager.offline_mode else "🔶"
+        print(f"{connection_status} Display updated: {now.strftime('%H:%M:%S')}{dst_indicator}")
 
 def startup_sequence():
     """Perform startup verification and setup"""
@@ -540,10 +546,11 @@ def startup_sequence():
     print(f"🔄 Refresh interval: {REFRESH_INTERVAL} seconds")
     print("📡 NTP monitoring: Background thread every 5 minutes")
     print("🔶 Offline mode: Continues with system clock when internet unavailable")
+    print("📝 Terminal output: Every 5 minutes + important events only")
     print("⌨️  Press Ctrl+C to exit cleanly\n")
     
-    # Show initial time
-    display_current_time()
+    # Show initial time with logging
+    display_current_time(force_log=True)
 
 # === Hoofdlus ===
 def main():
@@ -557,9 +564,9 @@ def main():
             # Display current time (works online and offline)
             display_current_time()
             
-            # Show status summary every 60 iterations (roughly every minute)
+            # Show status summary every 300 iterations (roughly every 5 minutes)
             status_counter += 1
-            if status_counter >= 60:
+            if status_counter >= 300:
                 time_manager.print_status_summary()
                 status_counter = 0
             
